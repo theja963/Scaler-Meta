@@ -6,10 +6,8 @@ from typing import List, Dict, Tuple
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
-try:
-    from ..models import AnomalyAction, AnomalyObservation
-except ImportError:
-    from models import AnomalyAction, AnomalyObservation
+
+from Modified.models import AnomalyAction, AnomalyObservation
 
 
 class AnomalyDetectionEnvironment(Environment):

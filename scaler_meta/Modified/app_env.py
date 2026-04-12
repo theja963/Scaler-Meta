@@ -35,12 +35,12 @@ except Exception as e:  # pragma: no cover
         "openenv is required for the web interface. Install dependencies with '\n    uv sync\n'"
     ) from e
 
-try:
-    from ..Modified.models import AnomalyAction, AnomalyObservation
-    from ..Modified.environment import AnomalyDetectionEnvironment
-except ModuleNotFoundError:
-    from models import AnomalyAction, AnomalyObservation
-    from environment import AnomalyDetectionEnvironment
+# try:
+#     from ..Modified.models import AnomalyAction, AnomalyObservation
+#     from ..Modified.environment import AnomalyDetectionEnvironment
+# except ModuleNotFoundError:
+from Modified.models import AnomalyAction, AnomalyObservation
+from Modified.environment import AnomalyDetectionEnvironment
 
     # from models import ScalerMetaAction, ScalerMetaObservation
 

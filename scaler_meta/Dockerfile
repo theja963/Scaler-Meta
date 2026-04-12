@@ -1,64 +1,40 @@
-# Multi-stage build using openenv-base
-
 ARG BASE_IMAGE=ghcr.io/meta-pytorch/openenv-base:latest
-FROM ${BASE_IMAGE} AS builder
-
-WORKDIR /app
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
-    rm -rf /var/lib/apt/lists/*
-
-ARG BUILD_MODE=in-repo
-ARG ENV_NAME=scaler_meta
-
-# Copy everything (your repo root)
-COPY . /app/env
-
-WORKDIR /app/env
-
-# Ensure uv exists
-RUN if ! command -v uv >/dev/null 2>&1; then \
-        curl -LsSf https://astral.sh/uv/install.sh | sh && \
-        mv /root/.local/bin/uv /usr/local/bin/uv && \
-        mv /root/.local/bin/uvx /usr/local/bin/uvx; \
-    fi
-
-# Install dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
-    if [ -f uv.lock ]; then \
-        uv sync --frozen --no-install-project --no-editable; \
-    else \
-        uv sync --no-install-project --no-editable; \
-    fi
-
-RUN --mount=type=cache,target=/root/.cache/uv \
-    if [ -f uv.lock ]; then \
-        uv sync --frozen --no-editable; \
-    else \
-        uv sync --no-editable; \
-    fi
-
-# ---------- FINAL STAGE ----------
 FROM ${BASE_IMAGE}
 
 WORKDIR /app
 
-# Copy virtual env
-COPY --from=builder /app/env/.venv /app/.venv
+# Install git (needed for deps)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install uv if not present
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx
 
 # Copy project
-COPY --from=builder /app/env /app/env
+COPY . /app
 
-ENV PATH="/app/.venv/bin:$PATH"
+# Set working dir to your env root
+WORKDIR /app
 
-# 🔥 IMPORTANT: root now holds models + env
-ENV PYTHONPATH="/app/env:$PYTHONPATH"
+# Install dependencies using uv
 
-# Health check (unchanged)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+ENV UV_LINK_MODE=copy
 
-# 🔥 UPDATED ENTRYPOINT
-# Now points to app_env instead of server.app
-CMD ["sh", "-c", "cd /app/env && uvicorn Modified.app_env:app --host 0.0.0.0 --port 8000"]
+RUN pip install git+https://github.com/meta-pytorch/openenv.git
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync
+# RUN python -c "import openenv; print('openenv OK')"
+
+
+# Ensure Python can find your modules
+ENV PYTHONPATH="/app:$PYTHONPATH"
+
+# HF Spaces requirement (if used)
+EXPOSE 7860
+
+# Run app
+CMD ["uvicorn", "Modified.app_env:app", "--host", "0.0.0.0", "--port", "7860"]
