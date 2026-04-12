@@ -1,0 +1,7 @@
+spec_version: 1
+name: scaler_meta
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
+
